@@ -25,8 +25,7 @@ end top_basys3;
 architecture top_basys3_arch of top_basys3 is
 
     -- signal declarations
-    
-  
+
 	-- component declarations
     component sevenseg_decoder is
         port (
@@ -70,6 +69,7 @@ architecture top_basys3_arch of top_basys3 is
 	
 begin
 	-- PORT MAPS ----------------------------------------
+	
     	
 	
 	-- CONCURRENT STATEMENTS ----------------------------
