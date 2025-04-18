@@ -25,11 +25,12 @@ end top_basys3;
 architecture top_basys3_arch of top_basys3 is
 
     -- signal declarations
-    signal slow_clk : std_logic := '0';
+    signal slow_clk : std_logic := '0';    -- 0.5 Hz for elevator movement
+    signal tdm_clk : std_logic := '0';     -- 10 Hz for TDM display
     signal master_reset, clk_reset, fsm_reset : std_logic := '0';
     signal floor1 : std_logic_vector(3 downto 0) := "0010";
     signal floor2 : std_logic_vector(3 downto 0) := "0010";
-    signal tdm_out : std_logic_vector(3 downto 0) := "1111";
+    signal tdm_out : std_logic_vector(3 downto 0) := "0000";
     signal tdm_sel : std_logic_vector(3 downto 0) := "0000";
   
 	-- component declarations
@@ -75,12 +76,22 @@ architecture top_basys3_arch of top_basys3 is
 	
 begin
 	-- PORT MAPS ----------------------------------------
+    -- Clock divider for elevator movement (0.5 sec per floor)
     clk_div: clock_divider 
         generic map ( k_DIV => 25000000 )
         port map (
             i_clk => clk,
             i_reset => clk_reset,
             o_clk => slow_clk
+        );
+        
+
+    tdm_clk_div: clock_divider 
+        generic map ( k_DIV => 100000 )
+        port map (
+            i_clk => clk,
+            i_reset => clk_reset,
+            o_clk => tdm_clk
         );
         
     elevator1: elevator_controller_fsm
@@ -104,7 +115,7 @@ begin
     display_tdm: TDM4
         generic map ( k_WIDTH => 4 )
         port map (
-            i_clk => clk,
+            i_clk => tdm_clk,  -- Using the slower 10Hz clock
             i_reset => master_reset,
             i_D3 => "1111",  -- F for "floor"
             i_D2 => floor2,  -- Direct connection from elevator 2
@@ -116,7 +127,7 @@ begin
         
     segment_decoder: sevenseg_decoder
         port map (
-            i_Hex => "1111",
+            i_Hex => tdm_out,
             o_seg_n => seg
         );
 	
