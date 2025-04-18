@@ -25,8 +25,8 @@ end top_basys3;
 architecture top_basys3_arch of top_basys3 is
 
     -- signal declarations
-    signal slow_clk : std_logic := '0';    -- 0.5 Hz for elevator movement
-    signal tdm_clk : std_logic := '0';     -- 10 Hz for TDM display
+    signal slow_clk : std_logic := '0';   
+    signal tdm_clk : std_logic := '0';     
     signal master_reset, clk_reset, fsm_reset : std_logic := '0';
     signal floor1 : std_logic_vector(3 downto 0) := "0010";
     signal floor2 : std_logic_vector(3 downto 0) := "0010";
@@ -76,7 +76,6 @@ architecture top_basys3_arch of top_basys3 is
 	
 begin
 	-- PORT MAPS ----------------------------------------
-    -- Clock divider for elevator movement (0.5 sec per floor)
     clk_div: clock_divider 
         generic map ( k_DIV => 25000000 )
         port map (
@@ -115,12 +114,12 @@ begin
     display_tdm: TDM4
         generic map ( k_WIDTH => 4 )
         port map (
-            i_clk => tdm_clk,  -- Using the slower 10Hz clock
+            i_clk => tdm_clk,  
             i_reset => master_reset,
-            i_D3 => "1111",  -- F for "floor"
-            i_D2 => floor2,  -- Direct connection from elevator 2
-            i_D1 => "1111",  -- F for "floor"
-            i_D0 => floor1,  -- Direct connection from elevator 1
+            i_D3 => "1111",  
+            i_D2 => floor2,  
+            i_D1 => "1111",  
+            i_D0 => floor1,  
             o_data => tdm_out,
             o_sel => tdm_sel
         );
@@ -136,9 +135,7 @@ begin
 	-- LED 15 gets the FSM slow clock signal. The rest are grounded.
 	led(15) <= slow_clk;
 	led(14 downto 0) <= (others => '0');
-	
-	-- leave unused switches UNCONNECTED. Ignore any warnings this causes.
-	
+		
 	-- reset signals
 	master_reset <= btnU;
 	clk_reset <= btnL or master_reset;
