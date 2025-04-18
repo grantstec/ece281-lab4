@@ -25,6 +25,29 @@ end top_basys3;
 architecture top_basys3_arch of top_basys3 is
 
     -- signal declarations
+    
+    signal slow_clk : std_logic := '0';
+    signal master_reset : std_logic := '0';
+    signal clk_reset : std_logic := '0';
+    signal fsm_reset : std_logic := '0';
+    
+    -- First elevator signals
+    signal elevator1_floor : std_logic_vector(3 downto 0) := "0010"; -- Initialize to floor 2
+    signal elevator1_stop : std_logic := '0';
+    signal elevator1_up_down : std_logic := '0';
+    
+    -- Second elevator signals
+    signal elevator2_floor : std_logic_vector(3 downto 0) := "0010"; -- Initialize to floor 2
+    signal elevator2_stop : std_logic := '0';
+    signal elevator2_up_down : std_logic := '0';
+    
+    -- Display signals
+    signal display0 : std_logic_vector(3 downto 0) := "0000"; -- Rightmost display (elevator 1)
+    signal display1 : std_logic_vector(3 downto 0) := "1111"; -- "F" for "floor"
+    signal display2 : std_logic_vector(3 downto 0) := "0000"; -- Second from left (elevator 2)
+    signal display3 : std_logic_vector(3 downto 0) := "1111"; -- "F" for "floor"
+    signal display_data : std_logic_vector(3 downto 0) := "0000";
+    signal display_select : std_logic_vector(3 downto 0) := "0000";
 
 	-- component declarations
     component sevenseg_decoder is
@@ -69,15 +92,76 @@ architecture top_basys3_arch of top_basys3 is
 	
 begin
 	-- PORT MAPS ----------------------------------------
-	
+    clk_div_inst : clock_divider
+        generic map (k_DIV => 25000000)
+        port map (
+            i_clk => clk,
+            i_reset => clk_reset,
+            o_clk => slow_clk
+        );
+    
+    elevator1_controller : elevator_controller_fsm
+        port map (
+            i_clk => slow_clk,
+            i_reset => fsm_reset,
+            is_stopped => elevator1_stop,
+            go_up_down => elevator1_up_down,
+            o_floor => elevator1_floor
+        );
+    
+    elevator2_controller : elevator_controller_fsm
+        port map (
+            i_clk => slow_clk,
+            i_reset => fsm_reset,
+            is_stopped => elevator2_stop,
+            go_up_down => elevator2_up_down,
+            o_floor => elevator2_floor
+        );
+    
+    display_tdm : TDM4
+        generic map (k_WIDTH => 4)
+        port map (
+            i_clk => clk, -- Use fast clock for display multiplexing
+            i_reset => master_reset,
+            i_D3 => display3,
+            i_D2 => display2,
+            i_D1 => display1,
+            i_D0 => display0,
+            o_data => display_data,
+            o_sel => display_select
+        );
+    
+    -- 7-segment decoder
+    seg_decoder : sevenseg_decoder
+        port map (
+            i_Hex => display_data,
+            o_seg_n => seg
+        );
     	
 	
 	-- CONCURRENT STATEMENTS ----------------------------
+		-- Elevator 1: sw(0) for Up/Down, sw(1) for Stop
+	elevator1_up_down <= sw(0);
+	elevator1_stop <= sw(1);
+	
+	-- Elevator 2: sw(15) for Up/Down, sw(14) for Stop
+	elevator2_up_down <= sw(15);
+	elevator2_stop <= sw(14);
+	
+	-- Connect display data
+	display0 <= elevator1_floor; -- Rightmost display shows elevator 1 floor
+	display2 <= elevator2_floor; -- Second from left shows elevator 2 floor
+	
+	-- Connect displays to anodes (active low)
+	an <= display_select;
 	
 	-- LED 15 gets the FSM slow clock signal. The rest are grounded.
-	
+	led(15) <= slow_clk;
 	-- leave unused switches UNCONNECTED. Ignore any warnings this causes.
-	
+	led(14 downto 0) <= (others => '0');
 	-- reset signals
+    master_reset <= btnU; -- Master reset (resets both clock and FSM)
+	clk_reset <= btnL or master_reset; -- Clock reset
+	fsm_reset <= btnR or master_reset; -- FSM reset
 	
 end top_basys3_arch;
